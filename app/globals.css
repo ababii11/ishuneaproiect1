@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #f5f7fa;
+  --foreground: #22223b;
+  --accent: #ff6f61;
+  --accent-secondary: #4ecca3;
+  --in-stock: #4ecca3;
+  --out-stock: #ff6f61;
+  --search-bg: #ffffff;
+  --search-border: #4ecca3;
+  --filter-bg: #e9ecef;
+  --filter-border: #ff6f61;
+  --font-sans: 'Poppins', Arial, Helvetica, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #22223b;
+    --foreground: #f5f7fa;
+    --accent: #ffb86b;
+    --accent-secondary: #8be9fd;
+    --search-bg: #2a2a40;
+    --search-border: #8be9fd;
+    --filter-bg: #2a2a40;
+    --filter-border: #ffb86b;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  transition: background 0.3s, color 0.3s;
 }
+
+/* Accent buttons */
+.button, .btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6em 1.2em;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s, transform 0.2s;
+}
+.button:hover, .btn:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Search bar */
+.searchbar {
+  background: var(--search-bg);
+  border: 2px solid var(--search-border);
+  border-radius: 12px;
+  padding: 0.5em 1em;
+  font-size: 1em;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.searchbar:focus {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* Filters */
+.filter {
+  background: var(--filter-bg);
+  border: 2px solid var(--filter-border);
+  border-radius: 10px;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
+  font-size: 1em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filter:hover, .filter:focus {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+/* Stock status */
+.in-stock {
+  color: var(--in-stock);
+  font-weight: bold;
+}
+.out-stock {
+  color: var(--out-stock);
+  font-weight: bold;
+}
+
+/* Links */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+a:hover {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+}
+
+/* Footer */
+.site-footer {
+  background: var(--foreground);
+  color: var(--background);
+  padding: 2em 0;
+  text-align: center;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+}
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1em;
+}
+.footer-content p {
+  margin: 0.5em 0;
+}
+.footer-content a {
+  color: var(--accent);
+  text-decoration: none;
+  margin: 0 0.5em;
+}
+.footer-content a:hover {
+  text-decoration: underline;
+}
+

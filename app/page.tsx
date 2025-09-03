@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 type Product = {
   id: string;
@@ -8,6 +9,7 @@ type Product = {
   category: "Electronics" | "Books" | "Clothing" | "Home";
   price: number;
   inStock: boolean;
+  image?: string;
 };
 
 const categoryValues: Product["category"][] = ["Electronics", "Books", "Clothing", "Home"];
@@ -17,8 +19,8 @@ function generateProducts(count: number): Product[] {
   for (let i = 1; i <= count; i++) {
     const category = categoryValues[(i - 1) % categoryValues.length];
     const basePrice = category === "Electronics" ? 80 : category === "Books" ? 20 : category === "Clothing" ? 40 : 30;
-    const price = Math.round((basePrice + ((i * 7) % 120) + (i % 5) * 3) * 1); // 20 - ~200+
-    const inStock = i % 3 !== 0; // about ~66% in stock
+    const price = Math.round((basePrice + ((i * 7) % 120) + (i % 5) * 3) * 1);
+    const inStock = i % 3 !== 0;
     const adjective = ["Premium", "Compact", "Eco", "Classic", "Smart", "Urban", "Pro", "Lite"][i % 8];
     const noun = category === "Electronics"
       ? ["Headphones", "Speaker", "Mouse", "Keyboard", "Charger"][i % 5]
@@ -33,12 +35,13 @@ function generateProducts(count: number): Product[] {
       category,
       price,
       inStock,
+      image: `https://picsum.photos/seed/local-${i}/640/400`,
     });
   }
   return products;
 }
 
-const allProducts: Product[] = generateProducts(100);
+const localProducts: Product[] = generateProducts(100);
 
 export default function Home() {
   const [query, setQuery] = useState("");
@@ -47,6 +50,37 @@ export default function Home() {
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
 
+  const [products, setProducts] = useState<Product[]>(localProducts);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchApiProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+        const res = await fetch("/api/products", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const apiProducts = (json?.products ?? []) as Product[];
+        if (cancelled) return;
+        // Merge unique by id, keeping local first
+        const existingIds = new Set(localProducts.map((p) => p.id));
+        const merged = localProducts.concat(
+          apiProducts.filter((p) => !existingIds.has(p.id))
+        );
+        setProducts(merged);
+      } catch (e: unknown) {
+        if (!cancelled) setError("Nu s-au putut incarca produsele din API.");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    fetchApiProducts();
+    return () => { cancelled = true; };
+  }, []);
+
   const categories = ["All", "Electronics", "Books", "Clothing", "Home"] as const;
 
   const filtered = useMemo(() => {
@@ -54,7 +88,7 @@ export default function Home() {
     const min = minPrice !== "" ? Number(minPrice) : Number.NEGATIVE_INFINITY;
     const max = maxPrice !== "" ? Number(maxPrice) : Number.POSITIVE_INFINITY;
 
-    return allProducts.filter((p) => {
+    return products.filter((p) => {
       if (q && !p.title.toLowerCase().includes(q)) return false;
       if (category !== "All" && p.category !== category) return false;
       if (Number.isFinite(min) && p.price < min) return false;
@@ -62,36 +96,42 @@ export default function Home() {
       if (onlyInStock && !p.inStock) return false;
       return true;
     });
-  }, [query, category, minPrice, maxPrice, onlyInStock]);
+  }, [query, category, minPrice, maxPrice, onlyInStock, products]);
 
   const resultsCount = filtered.length;
 
   return (
     <div className="font-sans min-h-screen p-8 sm:p-12">
-      <div className="mx-auto w-full max-w-5xl flex flex-col gap-8">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Catalog produse</h1>
-          <p className="text-sm text-foreground/70">Cauta si filtreaza produsele dupa categorie, pret si stoc.</p>
-        </header>
+      <div className="mx-auto w-full max-w-6xl flex flex-col gap-10">
+        {/* Hero */}
+        <section className="mt-4 text-center">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
+            Descopera <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--accent)] to-[var(--accent-secondary)]">produse</span> care te inspira
+          </h1>
+          <p className="mt-3 text-sm sm:text-base opacity-80 max-w-2xl mx-auto">
+            Cauta si filtreaza rapid in catalogul nostru — o experienta fluida, cu un design proaspat.
+          </p>
+        </section>
 
-        <section className="rounded-xl border border-black/[.08] dark:border-white/[.14] p-4 sm:p-6 bg-background/60 backdrop-blur">
+        {/* Filters */}
+        <section id="filtre" className="rounded-2xl glass p-5 sm:p-7 border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="col-span-1 sm:col-span-2">
-              <label className="block text-xs font-medium mb-1">Search</label>
+              <label className="block text-xs font-semibold mb-1">Search</label>
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Cauta produse..."
-                className="w-full h-10 px-3 rounded-md border border-black/[.12] dark:border-white/[.12] bg-transparent focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20"
+                className="searchbar w-full h-11 px-3 bg-transparent focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">Categorie</label>
+              <label className="block text-xs font-semibold mb-1">Categorie</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-10 px-3 rounded-md border border-black/[.12] dark:border-white/[.12] bg-transparent focus:outline-none"
+                className="filter w-full h-11 bg-transparent focus:outline-none"
               >
                 {categories.map((c) => (
                   <option key={c} value={c} className="bg-background text-foreground">
@@ -103,7 +143,7 @@ export default function Home() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">Pret minim</label>
+                <label className="block text-xs font-semibold mb-1">Pret minim</label>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -111,11 +151,11 @@ export default function Home() {
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   placeholder="0"
-                  className="w-full h-10 px-3 rounded-md border border-black/[.12] dark:border-white/[.12] bg-transparent focus:outline-none"
+                  className="filter w-full h-11 bg-transparent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">Pret maxim</label>
+                <label className="block text-xs font-semibold mb-1">Pret maxim</label>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -123,7 +163,7 @@ export default function Home() {
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   placeholder="1000"
-                  className="w-full h-10 px-3 rounded-md border border-black/[.12] dark:border-white/[.12] bg-transparent focus:outline-none"
+                  className="filter w-full h-11 bg-transparent focus:outline-none"
                 />
               </div>
             </div>
@@ -139,47 +179,68 @@ export default function Home() {
               <label htmlFor="in-stock" className="text-sm">Doar produse in stoc</label>
             </div>
           </div>
+
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm opacity-70">
+              {resultsCount} rezultat{resultsCount === 1 ? "" : "e"}
+            </p>
+            {(query || category !== "All" || minPrice || maxPrice || onlyInStock) && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setCategory("All");
+                  setMinPrice("");
+                  setMaxPrice("");
+                  setOnlyInStock(false);
+                }}
+                className="text-sm underline underline-offset-4 hover:opacity-80"
+              >
+                Reseteaza filtrele
+              </button>
+            )}
+          </div>
         </section>
 
-        <section className="flex items-center justify-between">
-          <p className="text-sm text-foreground/70">
-            {resultsCount} rezultat{resultsCount === 1 ? "" : "e"}
-          </p>
-          {(query || category !== "All" || minPrice || maxPrice || onlyInStock) && (
-            <button
-              onClick={() => {
-                setQuery("");
-                setCategory("All");
-                setMinPrice("");
-                setMaxPrice("");
-                setOnlyInStock(false);
-              }}
-              className="text-sm underline underline-offset-4 hover:opacity-80"
-            >
-              Reseteaza filtrele
-            </button>
+        {/* Products */}
+        <section id="produse" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {error && (
+            <div className="col-span-full text-center text-sm opacity-80 py-3 rounded-lg border border-red-400/40">
+              {error}
+            </div>
           )}
-        </section>
-
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.length === 0 ? (
-            <div className="col-span-full text-center text-sm text-foreground/70 py-12 border border-dashed rounded-lg">
+          {isLoading && (
+            <div className="col-span-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-black/10 dark:border-white/10 p-5 animate-pulse bg-background/50 h-48" />
+              ))}
+            </div>
+          )}
+          {!isLoading && filtered.length === 0 ? (
+            <div className="col-span-full text-center text-sm opacity-80 py-16 border border-dashed rounded-2xl glass">
               Niciun rezultat. Incearca sa modifici criteriile de filtrare.
             </div>
           ) : (
             filtered.map((p) => (
-              <article key={p.id} className="rounded-xl border border-black/[.08] dark:border-white/[.14] p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">{p.title}</h3>
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-black/[.12] dark:border-white/[.12]">
-                    {p.category}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">{p.price} RON</span>
-                  <span className={p.inStock ? "text-green-600" : "text-red-600"}>
-                    {p.inStock ? "In stoc" : "Stoc epuizat"}
-                  </span>
+              <article key={p.id} className="card rounded-2xl border border-black/10 dark:border-white/10 p-0 overflow-hidden bg-background/70">
+                {p.image && (
+                  <div className="relative w-full h-40 sm:h-44">
+                    <Image src={p.image} alt={p.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                  </div>
+                )}
+                <div className="p-5 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold tracking-tight">{p.title}</h3>
+                    <span className="badge">
+                      {p.category}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-bold text-lg">{p.price} RON</span>
+                    <span className={p.inStock ? "in-stock" : "out-stock"}>
+                      {p.inStock ? "In stoc" : "Stoc epuizat"}
+                    </span>
+                  </div>
+                  <button className="btn mt-1 self-start">Adauga in cos</button>
                 </div>
               </article>
             ))
