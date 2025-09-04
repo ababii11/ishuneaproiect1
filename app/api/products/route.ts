@@ -23,7 +23,6 @@ export async function GET() {
       category,
       price,
       inStock,
-      image: `https://picsum.photos/seed/api-${i}/640/400`,
     };
   });
 

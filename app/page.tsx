@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+ 
 
 type Product = {
   id: string;
@@ -9,7 +9,7 @@ type Product = {
   category: "Electronics" | "Books" | "Clothing" | "Home";
   price: number;
   inStock: boolean;
-  image?: string;
+  
 };
 
 const categoryValues: Product["category"][] = ["Electronics", "Books", "Clothing", "Home"];
@@ -35,7 +35,6 @@ function generateProducts(count: number): Product[] {
       category,
       price,
       inStock,
-      image: `https://picsum.photos/seed/local-${i}/640/400`,
     });
   }
   return products;
@@ -43,12 +42,25 @@ function generateProducts(count: number): Product[] {
 
 const localProducts: Product[] = generateProducts(100);
 
+// Comparison helper
+function compareProductsSummary(a: Product | undefined, b: Product | undefined): string {
+  if (!a || !b) return "Selecteaza doua produse pentru comparatie.";
+  let summary = "";
+  if (a.title !== b.title) summary += `Titlu: "${a.title}" vs "${b.title}"\n`;
+  if (a.category !== b.category) summary += `Categorie: ${a.category} vs ${b.category}\n`;
+  if (a.price !== b.price) summary += `Pret: ${a.price} RON vs ${b.price} RON\n`;
+  if (a.inStock !== b.inStock) summary += `Stoc: ${a.inStock ? "In stoc" : "Stoc epuizat"} vs ${b.inStock ? "In stoc" : "Stoc epuizat"}\n`;
+  return summary || "Produsele sunt identice.";
+}
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
+  const [compareA, setCompareA] = useState<string>("");
+  const [compareB, setCompareB] = useState<string>("");
 
   const [products, setProducts] = useState<Product[]>(localProducts);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -99,6 +111,9 @@ export default function Home() {
   }, [query, category, minPrice, maxPrice, onlyInStock, products]);
 
   const resultsCount = filtered.length;
+
+  const productA = products.find(p => p.id === compareA);
+  const productB = products.find(p => p.id === compareB);
 
   return (
     <div className="font-sans min-h-screen p-8 sm:p-12">
@@ -201,6 +216,34 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Product Comparison */}
+        <section className="rounded-2xl glass p-5 border border-white/20 shadow mb-8">
+          <h2 className="text-lg font-bold mb-3">Compara doua produse</h2>
+          <div className="flex flex-col sm:flex-row gap-4 mb-3">
+            <select
+              value={compareA}
+              onChange={e => setCompareA(e.target.value)}
+              className="filter w-full sm:w-1/2"
+            >
+              <option value="">Alege primul produs</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+            <select
+              value={compareB}
+              onChange={e => setCompareB(e.target.value)}
+              className="filter w-full sm:w-1/2"
+            >
+              <option value="">Alege al doilea produs</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </select>
+          </div>
+          <pre className="bg-background rounded-lg p-3 text-sm whitespace-pre-wrap">{compareProductsSummary(productA, productB)}</pre>
+        </section>
+
         {/* Products */}
         <section id="produse" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {error && (
@@ -222,11 +265,7 @@ export default function Home() {
           ) : (
             filtered.map((p) => (
               <article key={p.id} className="card rounded-2xl border border-black/10 dark:border-white/10 p-0 overflow-hidden bg-background/70">
-                {p.image && (
-                  <div className="relative w-full h-40 sm:h-44">
-                    <Image src={p.image} alt={p.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-                  </div>
-                )}
+                
                 <div className="p-5 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold tracking-tight">{p.title}</h3>
